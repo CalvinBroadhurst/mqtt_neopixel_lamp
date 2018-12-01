@@ -1,0 +1,7 @@
+{
+	"mqtt_server" : "broker.mqttdashboard.com",
+	"mqtt_client" : "clientname",
+	"mqtt_topic" : "topic/topic",
+	"neopixel_pin" : 14,
+	"pixel_count" : 24
+}
