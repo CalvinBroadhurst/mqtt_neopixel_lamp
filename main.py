@@ -7,12 +7,18 @@ from machine import Pin, reset
 from neopixel import NeoPixel
 from umqtt.robust import MQTTClient
 
+# Define some basic colours
+led_off = (0, 0, 0)
+led_red = (32, 0, 0)
+led_green = (0, 32, 0)
+led_blue = (0, 0, 32)
+
 
 with open("./config.json") as fp:
     config = ujson.load(fp)
 
 pin = Pin(config["neopixel_pin"], Pin.OUT) 
-np = NeoPixel(pin, 24)
+np = NeoPixel(pin, config["pixel_count"])
 
 heartbeat = Pin(2, Pin.OUT)  # Pin 2 is connected to the blue LED on Wemos board
 
@@ -28,10 +34,8 @@ def goLamp():
         client.subscribe(config["mqtt_topic"])
 
     while 1:
-        try:
-            client.wait_msg() 
-        finally:
-            client.disconnect()
+        print("waiting for message")
+        client.wait_msg() 
         gc.collect()
 
 
@@ -40,12 +44,31 @@ def do_callback(topic, msg):
     print("value: " + value)
     splitval = value.split(",")
     red = int(splitval[0])
-    green = int(splitval[0])
-    blue = int(splitval[0])
+    green = int(splitval[1])
+    blue = int(splitval[2])
+    print(red, green, blue)
     lampcolour = (red, green, blue)
     np.fill(lampcolour)
-    np.write
+#    for i in range(0, config["pixel_count"]):
+#        np[i] = lampcolour
+    np.write()
 
+def spin_the_ring():
+    # If we are running on micropython then spin the LED's on the ring
+    np.fill(led_off)
+    np.write()
+    for i in range(0, config["pixel_count"]):
+        np[i] = led_blue
+        if i > 0:
+            np[i - 1] = led_green
+        if i > 1:
+            np[i - 2] = led_red
+        if i > 2:
+            np[i - 3] = led_off
+        np.write()
+        sleep_ms(50)
+    np.fill(led_off)
+    np.write()
 
 # If we are being imported as a module then do nothing
 # If we are being run as a script then run
@@ -59,6 +82,7 @@ if __name__ == '__main__':
         sleep(5)
     
     try:
+        spin_the_ring()
         goLamp()
     except Exception as e:
         print("Something has gone horribly wrong")
